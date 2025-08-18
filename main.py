@@ -25,14 +25,16 @@ RED = (255,0,0)
 BLUE_HIT = pygame.USEREVENT + 1
 RED_HIT = pygame.USEREVENT +  2
 
+SPACESHIP_WIDTH,SPACESHIP_HEIGHT = 55,40
+
 blueship = pygame.image.load('blueship.png')
 redship = pygame.image.load('redship.png')
 background = pygame.image.load('space.jpg')
 bg = pygame.transform.scale(background,(WIDTH,HEIGHT))
-WIN.blit(bg(0,0))
+WIN.blit(bg,(0,0))
 
-blueship = pygame.transform.scale(blueship(50,50))
-redship = pygame.transform.scale(redship(50,50))
+blueship = pygame.transform.scale(blueship,(50,50))
+redship = pygame.transform.scale(redship,(50,50))
 
 
 class PowerUps(pygame.sprite.Sprite):
@@ -44,7 +46,10 @@ class PowerUps(pygame.sprite.Sprite):
 
 powerups_list = pygame.sprite.Group()
 
-images = ["powerup1.png","powerup2.png"]
+health_powerup = pygame.image.load('powerup1.png')
+damage_powerup = pygame.image.load('powerup2.png')
+
+images = [health_powerup,damage_powerup]
 
 for i in range(10):
     powerup = random.choice(images) 
@@ -72,6 +77,14 @@ def handle_bullets(blue_bullets,red_bullets,blue,red):
             blue_bullets.remove(bullet)
         elif bullet.x < 0:
             red_bullets.remove(bullet)
+    for bullet in red_bullets:
+        bullet.x += BULLET_VEL
+        if blue.colliderect(bullet):
+            pygame.event.post(pygame.event.Event(BLUE_HIT))
+            red_bullets.remove(bullet)
+        elif bullet.x < 0:
+            red_bullets.remove(bullet)
+
 
 def blue_handle_movement(keys_pressed,blue):
     if keys_pressed[pygame.K_a] and blue.x - VEL > 0:
@@ -86,6 +99,75 @@ def blue_handle_movement(keys_pressed,blue):
 def red_handle_movement(keys_pressed,red):
     if keys_pressed[pygame.K_LEFT] and red.x - VEL > BORDER.x + BORDER.width:
         red.x -= VEL
+    if keys_pressed[pygame.K_RIGHT] and red.x + VEL + red.width < WIDTH:
+        red.x+= VEL
+    if keys_pressed[pygame.K_UP] and red.y - VEL > 0:
+        red.y -= VEL
+    if keys_pressed[pygame.K_DOWN] and red.y + VEL + red.height < HEIGHT - 15:
+        red.y += VEL
+
+def draw_winner(text):
+    draw_text = WINNER_FONT.render(text,1,WHITE)
+    WIN.blit(draw_text,(WIDTH / 2 - draw_text.get_width() / 2, HEIGHT / 2 - draw_text.get_height() / 2))
+    pygame.display.update()
+    pygame.time.delay(5000)
+
+def main():
+    red = pygame.Rect(700,300,SPACESHIP_WIDTH,SPACESHIP_HEIGHT)
+    blue = pygame.rect(100,300,SPACESHIP_WIDTH,SPACESHIP_HEIGHT)
+    red_bullets = []
+    blue_bullets = []
+    red_health = 10
+    blue_health = 10
+    red_damage = 1
+    blue_damage = 1
+
+    clock = pygame.time.Clock()
+    run= True
+    while run:
+        clock.tick(FPS)
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                run = False
+                pygame.quit()
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_z and len(blue_bullets) < MAX_BULLETS:
+                    bullet = pygame.Rect(blue.x,blue.y,10,5)
+                    blue_bullets.append(bullet)
+                if event.key == pygame.K_m and len(red_bullets) < MAX_BULLETS:
+                    bullet = pygame.Rect(red.x,red.y,10,5)
+            if event.type == RED_HIT:
+                red_health -= 1+(blue_damage)
+            if event.type == BLUE_HIT:
+                blue_health -= 1+(red_damage)
+            if blue.collidirect(health_powerup):
+                blue_health +=1
+            if red.collidirect(health_powerup):
+                red_health +=1
+            if blue.collidirect(damage_powerup):
+                blue_damage +=1
+            if red.collidirect(damage_powerup):
+                red_damage +=1
+
+        winner_text = ""
+        if red_health < 0:
+            winner_text = "Blue Wins!"
+        if blue_health < 0:
+            winner_text = "Red Wins!"
+        if winner_text !="":
+            draw_winner(winner_text)
+            break
+        keys_pressed = pygame.key.get_pressed()
+        blue_handle_movement(keys_pressed,blue)
+        red_handle_movement(keys_pressed,red)
+        handle_bullets(blue_bullets,red_bullets,blue,red)
+        draw_window(red,blue,red_bullets,blue_bullets,red_health,blue_health)
+
+    main()
+if __name__ == "__main__":
+    main()
+
+
 
 
 
